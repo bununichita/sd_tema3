@@ -11,8 +11,8 @@
         "name": "kNN 1",
         "status": "0",
         "log": "",
-        "time_normal": 0.0,
-        "time_valgrind": 0.0,
+        "time_normal": 0.001538088,
+        "time_valgrind": 0.438213222,
         "timeout": 30000,
         "test_score": 5
       },
@@ -21,7 +21,7 @@
         "name": "kNN 2",
         "status": "0",
         "log": "",
-        "time_normal": 0.0,
+        "time_normal": 0.001285318,
         "time_valgrind": 0.0,
         "timeout": 30000,
         "test_score": 5
