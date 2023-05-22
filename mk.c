@@ -228,6 +228,156 @@ void autocorrect(trie_node_t *node, char *word, int k, int len, char *s)
     }
 }
 
+trie_node_t *complete_node(trie_node_t *node, char *key)
+{
+	
+	if (key[0] == '\0') {
+        return node;
+    }
+    trie_node_t *next = node->children[key[0] - 'a'];
+    if (!next) {
+        return NULL;
+    }
+    return complete_node(next, key + 1);
+}
+
+int autocomplete_1(trie_node_t *node, char *word, char *s, int *found) {
+
+	if (!node) {
+		return 0;
+	}
+	
+	if (node->end_of_word == 1) {
+		if (*found) {
+			if (strcmp(s, word) < 0) {
+				strcpy(word, s);
+			}
+		} else {
+			*found = 1;
+			strcpy(word, s);
+		}
+		return 1;
+	}
+	
+	for (int i = 0; i < ALPHABET_SIZE; i++) {
+		int len = strlen(s);
+		s[len] = i + 'a';
+		s[len + 1] = '\0';
+		if (autocomplete_1(node->children[i], word, s, found)) {
+			return 1;
+		}		
+		s[len] = '\0';
+	}
+}
+
+int find_len(trie_node_t *node, int len)
+{
+	
+	if (!node) {
+		return -1;
+	}
+
+	if (!node->n_children) {
+		return len;
+	}
+	int next_exists = 0;
+	for (int i = 0; i < ALPHABET_SIZE; i++) {
+		// int l = find_len(node->children[i], len + 1);
+		// if (l >= 0) {
+		// 	return l;
+		// }
+		if (node->children[i]) {
+			next_exists = 1;
+			if (node->children[i]->end_of_word) {
+				return len + 1;
+			}
+		}
+	}
+
+	if (!next_exists) {
+		return -1;
+	}
+
+	for (int i = 0; i < ALPHABET_SIZE; i++) {
+		int aux = find_len(node->children[i], len + 1);
+		if (aux >= 0) {
+			return aux;
+		}
+	}
+}
+
+void autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
+	
+	if (!node) {
+		return;
+	}
+
+	if (!iter) {
+		// printez cuvantul
+		if (node->end_of_word) {
+			printf("%s\n", s);
+		}
+	} else {
+		for (int i = 0; i < ALPHABET_SIZE; i++) {
+			int len = strlen(s);
+			s[len] = i + 'a';
+			s[len + 1] = '\0';
+			autocomplete_2(node->children[i], s,  iter - 1, found);
+			s[len] = '\0';
+		}
+	}
+}
+
+void find_freq(trie_node_t *node, int *max_freq) {
+	if (!node) {
+		return;
+	}
+
+	if (node->end_of_word) {
+		if (*(int *)node->value > *max_freq) {
+			int val = *(int *)node->value;
+			*max_freq = val;
+		}
+	}
+
+	for (int i = 0; i < ALPHABET_SIZE; i++) {
+		find_freq(node->children[i], max_freq);
+	}
+}
+
+void autocomplete_prep(trie_t *trie, char *word, int a_case)
+{
+	
+	char s[MAX_SIZE_WORD], key[MAX_SIZE_WORD];
+	strcpy(key, word);
+	strcpy(s, word);
+	int aux = 0;
+	int *found;
+	found = &aux;
+
+	trie_node_t *node = complete_node(trie->root, key);
+
+	strcpy(key, word);
+
+
+	if (a_case == 1) {
+		autocomplete_1(node, word, s, found);
+		printf("%s\n", word);
+	} else if (a_case == 2) {
+		int len = find_len(node, 0);
+		// printf("%d\n", len);
+		autocomplete_2(node, word, len, found);
+		// autocomplete_2(node, word, s, found);
+	} else if (a_case == 3) {
+		int *freq;
+		*freq = 0;
+		find_freq(node, freq);
+		printf("freq = %d\n", *freq);
+	}else if (a_case == 0) {
+
+	}
+}
+
 int main(void)
 {
 	trie_t *trie;
@@ -254,6 +404,11 @@ int main(void)
 			int k;
 			scanf("%s %d", word, &k);
 			autocorrect(trie->root, word, k, 0, s);
+		} else if (!strcmp(op, "AUTOCOMPLETE")) {
+			char word[MAX_SIZE_WORD];
+			int a_case;
+			scanf("%s %d", word, &a_case);
+			autocomplete_prep(trie, word, a_case);
 		}
 		scanf("%s", op);
 	}
