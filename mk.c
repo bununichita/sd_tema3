@@ -149,8 +149,83 @@ void load(trie_t *trie, char *file)
 	while (fscanf(in, "%s", key) != EOF) {
 		trie_insert(trie, key);
 	}
-
 	fclose(in);
+}
+
+int remove_n(trie_node_t *node, char *key, trie_t *trie)
+{
+    if (key[0] == '\0') {
+        if (node->end_of_word) {
+            node->end_of_word = 0;
+            // if (!node->n_children) {
+            //     free(node->children);
+            //     free_value_cb(node->value);
+            //     free(node);
+            //     return 
+            // }
+            return (node->n_children == 0);
+        }
+        return 0;
+    }
+    trie_node_t *next = node->children[key[0] - 'a'];
+
+    if (next && remove_n(next, key + 1, trie)) {
+        // printf("test 194\n");
+        free(next->children);
+        free(next->value);
+        free(next);
+        node->children[key[0] - 'a'] = NULL;
+        node->n_children--;
+        trie->nNodes--;
+        if (!node->n_children && !node->end_of_word) {
+            // printf("test 199\n");
+            return 1;
+
+        }
+    }
+    // printf("test 204\n");
+    return 0;
+}
+
+int trie_remove(trie_t* trie, char* key) {
+    // TODO
+    trie_node_t *node = trie->root;
+    return remove_n(node, key, trie);
+}
+
+void autocorrect(trie_node_t *node, char *word, int k, int len, char *s)
+{
+	if (!node) {
+        return;
+    }
+	
+	if (len == strlen(word)) {
+		if (!node->end_of_word) {
+			return;
+		}
+		int dif = 0;
+		for (int i = 0; i < strlen(word); i++) {
+			if (s[i] != word[i]) {
+				dif++;
+			}
+		}
+		if (dif <= k) {
+			printf("%s\n", s);
+		}
+		return;
+	}
+	
+	
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+		if (!len) {
+			strcpy(s, "");
+		}
+		s[len] = i + 'a';
+		s[len + 1] = '\0';
+		autocorrect(node->children[i], word, k, len + 1, s);
+		s[len] = '\0';
+    }
 }
 
 int main(void)
@@ -170,8 +245,16 @@ int main(void)
 			char file[FILENAME_SIZE];
 			scanf("%s", file);
 			load(trie, file);
+		} else if (!strcmp(op, "REMOVE")) {
+			char key[MAX_SIZE_WORD];
+			scanf("%s", key);
+			trie_remove(trie, key);
+		} else if (!strcmp(op, "AUTOCORRECT")) {
+			char word[MAX_SIZE_WORD], s[MAX_SIZE_WORD];
+			int k;
+			scanf("%s %d", word, &k);
+			autocorrect(trie->root, word, k, 0, s);
 		}
-		printf("ckasjdnc\n");
 		scanf("%s", op);
 	}
 	return 0;
