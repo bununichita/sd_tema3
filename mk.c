@@ -103,16 +103,16 @@ void* trie_search(trie_t* trie, char* key) {
     return search(node, key, trie);
 }
 
-void insert(trie_node_t *node, char *key, trie_t *trie, int add)
+void insert(trie_node_t *node, char *key, trie_t *trie)
 {
     if (key[0] == '\0') {
         // memcpy(node->value, value, trie->data_size);
-		if (add) {
-			*(int *)node->value++;
-		} else {
-			*(int *)node->value = 1;
-        	node->end_of_word = 1;
-		}
+		// int value;
+		// value = *(int *)node->value;
+		// value++;
+		// node->value = &value;
+		*(int *)node->value = *(int *)node->value + 1;
+		node->end_of_word = 1;
         return;
     }
     // printf("%d\n", *(int *)node->value);
@@ -126,19 +126,20 @@ void insert(trie_node_t *node, char *key, trie_t *trie, int add)
         trie->nNodes++;
     }
 
-    insert(next, key + 1, trie, add);
+    insert(next, key + 1, trie);
 }
 
 void trie_insert(trie_t* trie, char* key) {
     // TODO
     trie_node_t *node = trie->root;
-	int *value;
-	value = trie_search(trie, key);
-	if (value) {
-		insert(node, key, trie, 1);
-	} else {
-		insert(node, key, trie, 0);
-	}
+	// int *value;
+	// value = trie_search(trie, key);
+	// if (value) {
+	// 	insert(node, key, trie);
+	// } else {
+	// 	insert(node, key, trie);
+	// }
+	insert(node, key, trie);
     trie->size++;
 }
 
@@ -316,6 +317,7 @@ void autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
 		// printez cuvantul
 		if (node->end_of_word) {
 			printf("%s\n", s);
+			*found = 1;
 		}
 	} else {
 		for (int i = 0; i < ALPHABET_SIZE; i++) {
@@ -328,7 +330,7 @@ void autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
 	}
 }
 
-void find_freq(trie_node_t *node, int *max_freq) {
+void find_freq(trie_node_t *node, int *max_freq, int *found) {
 	if (!node) {
 		return;
 	}
@@ -337,11 +339,37 @@ void find_freq(trie_node_t *node, int *max_freq) {
 		if (*(int *)node->value > *max_freq) {
 			int val = *(int *)node->value;
 			*max_freq = val;
+			*found = 1;
 		}
 	}
 
+	if (node->n_children) {
+		for (int i = 0; i < ALPHABET_SIZE; i++) {
+			find_freq(node->children[i], max_freq, found);
+		}
+	}
+
+	
+}
+
+void autocomplete_3(trie_node_t *node, char *s, int max_freq)
+{
+	if (!node) {
+		return;
+	}
+	
+	if (node->end_of_word) {
+		if (*(int *)node->value == max_freq) {
+			printf("%s\n", s);
+		}
+	}	
+	
 	for (int i = 0; i < ALPHABET_SIZE; i++) {
-		find_freq(node->children[i], max_freq);
+		int len = strlen(s);
+		s[len] = i + 'a';
+		s[len + 1] = '\0';
+		autocomplete_3(node->children[i], s,  max_freq);
+		s[len] = '\0';
 	}
 }
 
@@ -351,9 +379,9 @@ void autocomplete_prep(trie_t *trie, char *word, int a_case)
 	char s[MAX_SIZE_WORD], key[MAX_SIZE_WORD];
 	strcpy(key, word);
 	strcpy(s, word);
-	int aux = 0;
+	int aux_found = 0;
 	int *found;
-	found = &aux;
+	found = &aux_found;
 
 	trie_node_t *node = complete_node(trie->root, key);
 
@@ -362,19 +390,58 @@ void autocomplete_prep(trie_t *trie, char *word, int a_case)
 
 	if (a_case == 1) {
 		autocomplete_1(node, word, s, found);
-		printf("%s\n", word);
+		if (!(*found)) {
+			printf("No words found\n");
+		} else {
+			printf("%s\n", word);
+		}
 	} else if (a_case == 2) {
 		int len = find_len(node, 0);
 		// printf("%d\n", len);
 		autocomplete_2(node, word, len, found);
+		if (!(*found)) {
+			printf("No words found\n");
+		}
 		// autocomplete_2(node, word, s, found);
 	} else if (a_case == 3) {
-		int *freq;
-		*freq = 0;
-		find_freq(node, freq);
-		printf("freq = %d\n", *freq);
+		// void *value;
+		// value = search(trie->root, "ac", trie);
+		// printf("value = %d\n", *(int *)value);
+		int freq = 0;
+		// *freq = 0;
+		find_freq(node, &freq, found);
+		if (*found) {
+			autocomplete_3(node, word, freq);
+		} else {
+			printf("No words found\n");
+		}
+		
+		// printf("freq = %d\n", *freq);
 	}else if (a_case == 0) {
-
+		autocomplete_1(node, word, s, found);
+		if (!(*found)) {
+			printf("No words found\n");
+		} else {
+			printf("%s\n", word);
+		}
+		aux_found = 0;
+		strcpy(word, key);
+		int len = find_len(node, 0);
+		// printf("%d\n", len);
+		autocomplete_2(node, word, len, found);
+		if (!(*found)) {
+			printf("No words found\n");
+		}
+		aux_found = 0;
+		strcpy(word, key);
+		int freq = 0;
+		// *freq = 0;
+		find_freq(node, &freq, found);
+		if (*found) {
+			autocomplete_3(node, word, freq);
+		} else {
+			printf("No words found\n");
+		}
 	}
 }
 
