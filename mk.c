@@ -271,45 +271,41 @@ int autocomplete_1(trie_node_t *node, char *word, char *s, int *found) {
 	}
 }
 
-int find_len(trie_node_t *node, int len)
-{
+// int find_len(trie_node_t *node, int len)
+// {
 	
-	if (!node) {
-		return -1;
-	}
+// 	if (!node) {
+// 		return -1;
+// 	}
 
-	if (!len && node->end_of_word) {
-		return 0;
-	}
+// 	if (!len && node->end_of_word) {
+// 		return 0;
+// 	}
 
-	if (!node->n_children) {
-		return len;
-	}
-	int next_exists = 0;
-	for (int i = 0; i < ALPHABET_SIZE; i++) {
-		// int l = find_len(node->children[i], len + 1);
-		// if (l >= 0) {
-		// 	return l;
-		// }
-		if (node->children[i]) {
-			next_exists = 1;
-			if (node->children[i]->end_of_word) {
-				return len + 1;
-			}
-		}
-	}
+// 	if (!node->n_children) {
+// 		return len;
+// 	}
+// 	int next_exists = 0;
+// 	for (int i = 0; i < ALPHABET_SIZE; i++) {
+// 		if (node->children[i]) {
+// 			next_exists = 1;
+// 			if (node->children[i]->end_of_word) {
+// 				return len + 1;
+// 			}
+// 		}
+// 	}
 
-	if (!next_exists) {
-		return -1;
-	}
+// 	if (!next_exists) {
+// 		return -1;
+// 	}
 
-	for (int i = 0; i < ALPHABET_SIZE; i++) {
-		int aux = find_len(node->children[i], len + 1);
-		if (aux >= 0) {
-			return aux;
-		}
-	}
-}
+// 	for (int i = 0; i < ALPHABET_SIZE; i++) {
+// 		int aux = find_len(node->children[i], len + 1);
+// 		if (aux >= 0) {
+// 			return aux;
+// 		}
+// 	}
+// }
 
 // void autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
 	
@@ -333,6 +329,23 @@ int find_len(trie_node_t *node, int len)
 // 		}
 // 	}
 // }
+
+void find_len(trie_node_t *node, int len, int *min_len)
+{
+	if (!node) {
+		return;
+	}
+
+	if (node->end_of_word) {
+		if (len < *min_len) {
+			*min_len = len;
+		}
+	}
+
+	for (int i = 0; i < ALPHABET_SIZE; i++) {
+		find_len(node->children[i], len + 1, min_len);
+	}
+}
 
 int autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
 	if (!node) {
@@ -373,25 +386,22 @@ void find_freq(trie_node_t *node, int *max_freq, int *found) {
 			*found = 1;
 		}
 	}
-
-	if (node->n_children) {
-		for (int i = 0; i < ALPHABET_SIZE; i++) {
-			find_freq(node->children[i], max_freq, found);
-		}
-	}
-
 	
+	for (int i = 0; i < ALPHABET_SIZE; i++) {
+		find_freq(node->children[i], max_freq, found);
+	}	
 }
 
-void autocomplete_3(trie_node_t *node, char *s, int max_freq)
+int autocomplete_3(trie_node_t *node, char *s, int max_freq)
 {
 	if (!node) {
-		return;
+		return 0;
 	}
 	
 	if (node->end_of_word) {
 		if (*(int *)node->value == max_freq) {
 			printf("%s\n", s);
+			return 1;
 		}
 	}	
 	
@@ -399,9 +409,13 @@ void autocomplete_3(trie_node_t *node, char *s, int max_freq)
 		int len = strlen(s);
 		s[len] = i + 'a';
 		s[len + 1] = '\0';
-		autocomplete_3(node->children[i], s,  max_freq);
+		int result = autocomplete_3(node->children[i], s,  max_freq);
+		if (result) {
+			return 1;
+		}
 		s[len] = '\0';
 	}
+	return 0;
 }
 
 void autocomplete_prep(trie_t *trie, char *word, int a_case)
@@ -427,9 +441,10 @@ void autocomplete_prep(trie_t *trie, char *word, int a_case)
 			printf("%s\n", word);
 		}
 	} else if (a_case == 2) {
-		int len = find_len(node, 0);
+		int min_len = MAX_SIZE_WORD;
+		find_len(node, 0, &min_len);
 		// printf("%d\n", len);
-		autocomplete_2(node, word, len, found);
+		autocomplete_2(node, word, min_len, found);
 		if (!(*found)) {
 			printf("No words found\n");
 		}
@@ -457,9 +472,10 @@ void autocomplete_prep(trie_t *trie, char *word, int a_case)
 		}
 		aux_found = 0;
 		strcpy(word, key);
-		int len = find_len(node, 0);
-		// printf("%d\n", len);
-		autocomplete_2(node, word, len, found);
+		int min_len = MAX_SIZE_WORD;
+		find_len(node, 0, &min_len);
+		// printf("min_len = %d\n", min_len);
+		autocomplete_2(node, word, min_len, found);
 		if (!(*found)) {
 			printf("No words found\n");
 		}
@@ -535,5 +551,8 @@ int main(void)
 		}
 		scanf("%s", op);
 	}
+
+	trie_free(&trie);
+
 	return 0;
 }
