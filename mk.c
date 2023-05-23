@@ -278,6 +278,10 @@ int find_len(trie_node_t *node, int len)
 		return -1;
 	}
 
+	if (!len && node->end_of_word) {
+		return 0;
+	}
+
 	if (!node->n_children) {
 		return len;
 	}
@@ -307,27 +311,54 @@ int find_len(trie_node_t *node, int len)
 	}
 }
 
-void autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
+// void autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
 	
+// 	if (!node) {
+// 		return;
+// 	}
+
+// 	if (!iter) {
+// 		// printez cuvantul
+// 		if (node->end_of_word) {
+// 			printf("%s\n", s);
+// 			*found = 1;
+// 		}
+// 	} else {
+// 		for (int i = 0; i < ALPHABET_SIZE; i++) {
+// 			int len = strlen(s);
+// 			s[len] = i + 'a';
+// 			s[len + 1] = '\0';
+// 			autocomplete_2(node->children[i], s,  iter - 1, found);
+// 			s[len] = '\0';
+// 		}
+// 	}
+// }
+
+int autocomplete_2(trie_node_t *node, char *s, int iter, int *found) {
 	if (!node) {
-		return;
+		return 0;
 	}
 
 	if (!iter) {
-		// printez cuvantul
+	// printez cuvantul
 		if (node->end_of_word) {
 			printf("%s\n", s);
 			*found = 1;
-		}
-	} else {
-		for (int i = 0; i < ALPHABET_SIZE; i++) {
-			int len = strlen(s);
-			s[len] = i + 'a';
-			s[len + 1] = '\0';
-			autocomplete_2(node->children[i], s,  iter - 1, found);
-			s[len] = '\0';
+			return 1;
 		}
 	}
+	for (int i = 0; i < ALPHABET_SIZE; i++) {
+		int len = strlen(s);
+		s[len] = i + 'a';
+		s[len + 1] = '\0';
+		int result = autocomplete_2(node->children[i], s,  iter - 1, found);
+		s[len] = '\0';
+		if (result) {
+			return 1;
+		}
+	}
+	return 0;
+
 }
 
 void find_freq(trie_node_t *node, int *max_freq, int *found) {
@@ -444,6 +475,31 @@ void autocomplete_prep(trie_t *trie, char *word, int a_case)
 		}
 	}
 }
+
+void free_aux(trie_node_t *node, void (*free_value_cb)(void*))
+{
+    if (!node) {
+        return;
+    }
+
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        free_aux(node->children[i], free_value_cb);
+    }
+
+    free(node->children);
+    free_value_cb(node->value);
+    free(node);    
+}
+
+void trie_free(trie_t** pTrie) {
+    // TODO
+    trie_t *trie = *pTrie;
+    trie_node_t *node = trie->root;
+
+    free_aux(node, trie->free_value_cb);
+
+    free(*pTrie);
+}  
 
 int main(void)
 {
